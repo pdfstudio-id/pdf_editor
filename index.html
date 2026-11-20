@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PDF Studio — Editor PDF Gratis & Cepat</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <meta name="description" content="Edit dokumen PDF gratis langsung di browser. Tambah tanda tangan, hapus background AI, isi formulir, dan gabung PDF secara aman." />
+
+  <!-- Library CDN -->
+  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-top">
+      <div class="brand-row">
+        <div class="brand">
+          <span class="brand-logo">📄</span>
+          <span class="brand-name">PDF Studio</span>
+        </div>
+
+        <div class="header-utils">
+          <select id="theme-select" class="input-tool theme-select" title="Pilih Tema Warna">
+            <option value="indigo">🟣 Indigo</option>
+            <option value="ocean">🔵 Ocean</option>
+            <option value="emerald">🟢 Emerald</option>
+            <option value="rose">🔴 Rose</option>
+          </select>
+          <button id="btn-theme-mode" class="btn btn-icon" title="Ganti Mode Siang/Malam">🌙</button>
+          <button id="btn-mobile-menu" class="btn btn-icon mobile-menu-btn" title="Menu Alat Edit">☰</button>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <label class="btn btn-primary" for="pdf-upload">📂 Buka PDF</label>
+        <input type="file" id="pdf-upload" accept="application/pdf" hidden />
+        <label class="btn btn-outline" id="lbl-merge-pdf" for="merge-upload">📎 Gabung</label>
+        <input type="file" id="merge-upload" accept="application/pdf" hidden disabled />
+        <button id="btn-download" class="btn btn-success" disabled>💾 Simpan PDF</button>
+      </div>
+    </div>
+
+    <div class="toolbar" id="main-toolbar">
+      <div class="toolbar-group" id="edit-tools">
+        <button id="btn-add-text" class="btn" disabled>📝 Teks</button>
+        <button id="btn-whiteout" class="btn" disabled>⬜ Whiteout</button>
+        <label class="btn" id="lbl-add-image" for="image-upload">🖼️ Gambar</label>
+        <input type="file" id="image-upload" accept="image/png, image/jpeg" hidden disabled />
+        <button id="btn-bg-remove" class="btn" disabled>🪄 Hapus BG</button>
+        <button id="btn-sign" class="btn" disabled>✍️ Tanda Tangan</button>
+        <button id="btn-form" class="btn" disabled>📋 Formulir</button>
+        <button id="btn-delete-obj" class="btn btn-danger" disabled>🗑️ Hapus</button>
+      </div>
+
+      <div class="toolbar-group">
+        <button id="btn-rotate-page" class="btn" disabled>🔄 Putar 90°</button>
+        <button id="btn-add-page" class="btn" disabled>➕ Halaman</button>
+        <button id="btn-del-page" class="btn btn-danger" disabled>❌ Hapus Hal.</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Toolbar Gaya Teks (Muncul otomatis saat teks dipilih) -->
+  <div id="text-toolbar" class="text-toolbar hidden">
+    <select id="font-family" class="input-tool" title="Jenis Font">
+      <option value="Arial">Arial</option>
+      <option value="Times New Roman">Times New Roman</option>
+      <option value="Calibri">Calibri</option>
+      <option value="Verdana">Verdana</option>
+      <option value="Georgia">Georgia</option>
+      <option value="Courier New">Courier New</option>
+    </select>
+
+    <input type="number" id="font-size" class="input-tool input-size" value="20" min="8" max="100" title="Ukuran Font" />
+
+    <button id="btn-bold" class="btn btn-sm" title="Tebal (Bold)"><b>B</b></button>
+    <button id="btn-italic" class="btn btn-sm" title="Miring (Italic)"><i>I</i></button>
+    <button id="btn-underline" class="btn btn-sm" title="Garis Bawah"><u>U</u></button>
+
+    <label class="color-picker-wrap" title="Warna Teks">
+      🎨 <input type="color" id="font-color" value="#000000" />
+    </label>
+  </div>
+
+  <main class="workspace">
+    <div id="empty-state" class="empty-state">
+      <div class="empty-card">
+        <div class="empty-icon">📄</div>
+        <h1>PDF Studio</h1>
+        <p>Edit dokumen PDF langsung di browser — cepat, gratis, dan 100% aman karena file tidak pernah diunggah ke server.</p>
+        <label class="btn btn-primary btn-lg" for="pdf-upload">📂 Pilih File PDF</label>
+        <div class="feature-badges">
+          <span>✍️ Tanda Tangan</span>
+          <span>🪄 Hapus BG AI</span>
+          <span>📋 Isi Formulir</span>
+          <span>📎 Gabung PDF</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="editor-container" class="editor-container hidden">
+      <div class="page-nav">
+        <button id="btn-prev" class="btn">⬅️ Sebelumnya</button>
+        <span id="page-info">Halaman 1 / 1</span>
+        <button id="btn-next" class="btn">Selanjutnya ➡️</button>
+      </div>
+
+      <div class="canvas-wrapper" id="canvas-wrapper">
+        <canvas id="pdf-canvas"></canvas>
+        <div class="fabric-layer">
+          <canvas id="fabric-canvas"></canvas>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal Tanda Tangan -->
+  <div id="sign-modal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Gambar Tanda Tangan</h3>
+      <canvas id="sign-pad" width="400" height="200"></canvas>
+      <div class="modal-actions">
+        <button id="btn-clear-sign" class="btn">Bersihkan</button>
+        <button id="btn-cancel-sign" class="btn">Batal</button>
+        <button id="btn-save-sign" class="btn btn-primary">Masukkan ke PDF</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Isi Formulir (AcroForm) -->
+  <div id="form-modal" class="modal hidden">
+    <div class="modal-content modal-form">
+      <h3>Isi Formulir PDF</h3>
+      <div id="form-fields-container" class="form-fields-container"></div>
+      <div class="modal-actions">
+        <button id="btn-cancel-form" class="btn">Batal</button>
+        <button id="btn-save-form" class="btn btn-primary">Terapkan ke PDF</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Hapus Latar Belakang (AI & Manual) -->
+  <div id="bg-modal" class="modal hidden">
+    <div class="modal-content modal-bg">
+      <h3>Hapus Latar Belakang (AI & Manual)</h3>
+
+      <div class="bg-controls">
+        <label class="btn btn-primary" for="bg-file-input">📁 Pilih Foto</label>
+        <input type="file" id="bg-file-input" accept="image/png, image/jpeg" hidden />
+        <button id="btn-bg-reset" class="btn btn-outline" disabled>↩️ Reset Foto</button>
+      </div>
+
+      <div id="bg-preview-area" class="bg-preview-area hidden">
+        <!-- Pilihan Mode -->
+        <div class="bg-mode-tabs">
+          <button id="btn-ai-bg" class="btn btn-primary">🤖 AI Otomatis</button>
+          <button id="mode-color" class="btn">🎯 Klik Warna</button>
+          <button id="mode-brush" class="btn">🧽 Hapus</button>
+          <button id="mode-restore" class="btn">🖌️ Kembalikan</button>
+        </div>
+
+        <!-- Kontrol Zoom -->
+        <div class="zoom-controls">
+          <button id="btn-zoom-out" class="btn btn-sm">➖ Perkecil</button>
+          <span id="bg-zoom-val">100%</span>
+          <button id="btn-zoom-in" class="btn btn-sm">➕ Perbesar</button>
+        </div>
+
+        <p id="bg-status-text" class="modal-hint">Pilih mode di atas: klik AI Otomatis, atau pilih mode manual.</p>
+
+        <div class="checkerboard-bg">
+          <canvas id="bg-preview-canvas"></canvas>
+        </div>
+
+        <!-- Pengaturan Mode Klik Warna -->
+        <div id="panel-color" class="slider-group hidden">
+          <label for="bg-tolerance">Toleransi Warna: <span id="bg-tolerance-val">40</span></label>
+          <input type="range" id="bg-tolerance" min="5" max="150" value="40" />
+        </div>
+
+        <!-- Pengaturan Mode Kuas (Hapus & Kembalikan) -->
+        <div id="panel-brush" class="slider-group hidden">
+          <label for="bg-brush-size">Ukuran Kuas: <span id="bg-brush-size-val">25</span>px</label>
+          <input type="range" id="bg-brush-size" min="5" max="80" value="25" />
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button id="btn-cancel-bg" class="btn">Batal</button>
+        <button id="btn-save-bg" class="btn btn-primary" disabled>Masukkan ke PDF</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
